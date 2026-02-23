@@ -31,6 +31,7 @@ module.exports = {
         TEMP: '$HOME/tmp',
         TMP: '$HOME/tmp',
         GIT_TMPDIR: '$HOME/tmp',
+        UV_LINK_MODE: 'copy',  // Termux 不支持硬链接
         MONITOR_LOG_LEVEL: 'INFO',
         MONITOR_LOG_DIR: './logs',
         MONITOR_ALERT_IMAGE_DIR: './alerts',

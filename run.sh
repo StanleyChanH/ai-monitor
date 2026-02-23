@@ -7,6 +7,9 @@ export TEMP="$HOME/tmp"
 export TMP="$HOME/tmp"
 export GIT_TMPDIR="$HOME/tmp"
 
+# uv 包管理器配置（Termux 不支持硬链接）
+export UV_LINK_MODE=copy
+
 # 创建临时目录
 mkdir -p "$HOME/tmp"
 
