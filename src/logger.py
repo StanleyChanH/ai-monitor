@@ -86,6 +86,10 @@ def setup_logging(
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, log_level))
 
+    # 抑制 httpx 的 HTTP 请求日志（太多了）
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+
     # 清除已有的处理器
     root_logger.handlers.clear()
 
