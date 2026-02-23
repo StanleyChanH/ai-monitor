@@ -101,6 +101,9 @@ class MonitorPipeline:
         self._cam_last_error_time: float = 0.0
         self._cam_reconnect_delay: float = self._settings.cam_reconnect_delay
 
+        # 推理间隔控制
+        self._last_inference_time: float = 0.0
+
     async def start(self) -> None:
         """启动流水线."""
         logger.info(
@@ -282,11 +285,23 @@ class MonitorPipeline:
 
     async def _inference_worker(self) -> None:
         """推理 worker - 调用 Ollama API 并处理告警."""
-        logger.info("inference_worker_started")
+        logger.info(
+            "inference_worker_started",
+            detection_interval=self._settings.detection_interval,
+        )
 
         while not self._shutdown_event.is_set():
             try:
                 processed_frame = await self._processed_queue.get()
+
+                # 检测间隔控制：跳过未到间隔的帧
+                current_time = time.time()
+                elapsed = current_time - self._last_inference_time
+                if elapsed < self._settings.detection_interval:
+                    # 跳过此帧，不进行推理
+                    continue
+
+                self._last_inference_time = current_time
 
                 with Timer(self._metrics, PipelineMetrics.STAGE_INFERENCE):
                     await self._run_inference(processed_frame)
