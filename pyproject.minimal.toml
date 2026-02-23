@@ -1,0 +1,18 @@
+# 最小依赖版本 - 无编译依赖
+[project]
+name = "ai-monitor"
+version = "0.2.0"
+description = "AI-powered video surveillance monitoring system using Ollama vision model"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "pillow>=12.1.1",
+]
+
+[project.scripts]
+ai-monitor = "src.main:entry_point"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

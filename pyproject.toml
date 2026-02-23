@@ -1,0 +1,15 @@
+[project]
+name = "ai-monitor"
+version = "0.2.0"
+description = "AI-powered video surveillance monitoring system using Ollama vision model"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.28.1",
+    "pillow>=12.1.1",
+    "structlog>=24.0.0",
+    "aiofiles>=24.0.0",
+]
+
+[project.scripts]
+ai-monitor = "src.main:entry_point"
