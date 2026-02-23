@@ -1,13 +1,47 @@
 """主入口文件."""
 
 import asyncio
+import os
 import signal
+from pathlib import Path
 
 from src.config import Settings
 from src.logger import get_logger, setup_logging
 from src.monitor import MonitorPipeline
 
 logger = get_logger(__name__)
+
+
+def load_env_file() -> None:
+    """加载 .env 文件到环境变量."""
+    # 查找 .env 文件（当前目录或项目根目录）
+    env_paths = [
+        Path.cwd() / ".env",
+        Path(__file__).parent.parent / ".env",
+    ]
+
+    for env_path in env_paths:
+        if env_path.exists():
+            with open(env_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    # 跳过空行和注释
+                    if not line or line.startswith("#"):
+                        continue
+                    # 解析 KEY=VALUE
+                    if "=" in line:
+                        key, _, value = line.partition("=")
+                        key = key.strip()
+                        value = value.strip()
+                        # 移除引号
+                        if value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]
+                        elif value.startswith("'") and value.endswith("'"):
+                            value = value[1:-1]
+                        # 只设置未定义的环境变量
+                        if key and key not in os.environ:
+                            os.environ[key] = value
+            return
 
 
 class Application:
@@ -34,9 +68,8 @@ class Application:
         logger.info(
             "application_starting",
             version="0.2.0",
+            provider=self._settings.inference_provider,
             cam_url=self._settings.cam_url,
-            ollama_api=self._settings.ollama_api,
-            model=self._settings.model_name,
         )
 
         # 创建流水线
@@ -97,6 +130,8 @@ async def main() -> None:
 
 def entry_point() -> None:
     """命令行入口点."""
+    # 加载 .env 文件（在导入 Settings 之前）
+    load_env_file()
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
