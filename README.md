@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🤖 AI Monitor
+<img src="icon.png" alt="AI Monitor Logo" width="128" height="128">
+
+# AI Monitor
 
 **把旧手机变成智能安防监控终端**
 
