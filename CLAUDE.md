@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-AI-powered video surveillance monitoring system that captures camera frames and analyzes them using Ollama's vision model (qwen3-vl) to detect suspicious activities or dangerous actions.
+AI-powered video surveillance monitoring system that captures camera frames and analyzes them using vision models (Ollama or Zhipu GLM-4V) to detect suspicious activities or dangerous actions.
 
 ## Architecture
 
@@ -70,8 +70,11 @@ All settings via environment variables (`.env` file):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `MONITOR_CAM_URL` | `http://127.0.0.1:8080/shot.jpg` | Camera endpoint |
-| `MONITOR_OLLAMA_API` | `http://10.167.1.223:11434/api/generate` | Ollama API |
-| `MONITOR_MODEL_NAME` | `qwen3-vl:4b-instruct-q4_K_M` | Vision model |
+| `MONITOR_INFERENCE_PROVIDER` | `ollama` | Inference provider: `ollama` or `zhipu` |
+| `MONITOR_OLLAMA_API` | `http://10.167.1.223:11434/api/generate` | Ollama API (when provider=ollama) |
+| `MONITOR_MODEL_NAME` | `qwen3-vl:4b-instruct-q4_K_M` | Vision model (Ollama) |
+| `MONITOR_ZHIPU_API_KEY` | - | Zhipu API Key (when provider=zhipu) |
+| `MONITOR_ZHIPU_MODEL` | `glm-4v-flash` | Vision model (Zhipu) |
 | `MONITOR_TARGET_WIDTH` | `640` | Image resize width |
 | `MONITOR_CAM_RECONNECT_ENABLED` | `true` | Auto-reconnect on camera disconnect |
 | `MONITOR_ENABLE_TERMUX_ALERTS` | `true` | Enable Termux-API alerts |
@@ -117,9 +120,10 @@ ai-monitor/
 ## Key Features Implemented (v0.2.0)
 
 1. **Pipeline Architecture**: Non-blocking inference, frame capture continues during processing
-2. **Alert System**: Webhook + local images + Termux-API (vibration, notification, toast)
-3. **Circuit Breaker**: Protects against API failures with auto-recovery
-4. **Auto-Reconnect**: Camera disconnect handling with exponential backoff
-5. **Log Rotation**: Prevents disk space issues (10MB per file, 5 backups)
-6. **PM2 Integration**: Process management for persistent operation
-7. **Signal Handling**: Graceful shutdown on SIGINT/SIGTERM
+2. **Multi-Provider Inference**: Supports both Ollama (local) and Zhipu GLM-4V (cloud)
+3. **Alert System**: Webhook + local images + Termux-API (vibration, notification, toast)
+4. **Circuit Breaker**: Protects against API failures with auto-recovery
+5. **Auto-Reconnect**: Camera disconnect handling with exponential backoff
+6. **Log Rotation**: Prevents disk space issues (10MB per file, 5 backups)
+7. **PM2 Integration**: Process management for persistent operation
+8. **Signal Handling**: Graceful shutdown on SIGINT/SIGTERM

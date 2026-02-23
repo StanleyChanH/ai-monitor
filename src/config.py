@@ -66,7 +66,17 @@ class Settings:
         default_factory=lambda: _get_float_env("MONITOR_CAM_RECONNECT_MAX_DELAY", 60.0)
     )
 
-    # Ollama
+    # 推理配置
+    inference_provider: str = field(
+        default_factory=lambda: os.getenv(
+            "MONITOR_INFERENCE_PROVIDER", "ollama"
+        ).lower()
+    )
+    inference_timeout: float = field(
+        default_factory=lambda: _get_float_env("MONITOR_INFERENCE_TIMEOUT", 30.0)
+    )
+
+    # Ollama（当 provider=ollama 时使用）
     ollama_api: str = field(
         default_factory=lambda: os.getenv(
             "MONITOR_OLLAMA_API", "http://10.167.1.223:11434/api/generate"
@@ -77,8 +87,21 @@ class Settings:
             "MONITOR_MODEL_NAME", "qwen3-vl:4b-instruct-q4_K_M"
         )
     )
-    inference_timeout: float = field(
-        default_factory=lambda: _get_float_env("MONITOR_INFERENCE_TIMEOUT", 30.0)
+
+    # Zhipu 智谱 AI（当 provider=zhipu 时使用）
+    zhipu_api_key: str = field(
+        default_factory=lambda: os.getenv("MONITOR_ZHIPU_API_KEY", "")
+    )
+    zhipu_api_url: str = field(
+        default_factory=lambda: os.getenv(
+            "MONITOR_ZHIPU_API_URL",
+            "https://open.bigmodel.cn/api/paas/v4/chat/completions"
+        )
+    )
+    zhipu_model: str = field(
+        default_factory=lambda: os.getenv(
+            "MONITOR_ZHIPU_MODEL", "glm-4v-flash"
+        )
     )
 
     # 性能
@@ -159,6 +182,20 @@ class Settings:
 
     def __post_init__(self):
         """配置验证."""
+        # 验证推理提供商
+        valid_providers = {"ollama", "zhipu"}
+        if self.inference_provider not in valid_providers:
+            raise ValueError(
+                f"inference_provider must be one of {valid_providers}, "
+                f"got {self.inference_provider}"
+            )
+
+        # 验证 Zhipu API Key（如果使用 zhipu）
+        if self.inference_provider == "zhipu" and not self.zhipu_api_key:
+            raise ValueError(
+                "zhipu_api_key is required when inference_provider is 'zhipu'"
+            )
+
         # 验证日志级别
         valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
         if self.log_level.upper() not in valid_levels:
@@ -188,8 +225,18 @@ class Settings:
         lines = [
             "=== AI Monitor 配置 ===",
             f"摄像头: {self.cam_url}",
-            f"Ollama API: {self.ollama_api}",
-            f"模型: {self.model_name}",
+            f"推理提供商: {self.inference_provider}",
+        ]
+
+        # 根据提供商显示不同的配置
+        if self.inference_provider == "ollama":
+            lines.append(f"Ollama API: {self.ollama_api}")
+            lines.append(f"模型: {self.model_name}")
+        else:  # zhipu
+            lines.append(f"智谱 API: {self.zhipu_api_url}")
+            lines.append(f"模型: {self.zhipu_model}")
+
+        lines.extend([
             f"目标宽度: {self.target_width}",
             f"检测间隔: {self.detection_interval}s",
             f"告警冷却: {self.alert_cooldown}s",
@@ -197,5 +244,5 @@ class Settings:
             f"日志目录: {self.log_dir}",
             f"告警目录: {self.alert_image_dir}",
             "========================",
-        ]
+        ])
         return "\n".join(lines)

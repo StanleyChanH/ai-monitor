@@ -342,6 +342,17 @@ class MonitorPipeline:
             }
 
     async def _run_inference(self, frame: ProcessedFrame) -> None:
+        """运行推理（根据提供商选择 Ollama 或 Zhipu）.
+
+        Args:
+            frame: 处理后的帧
+        """
+        if self._settings.inference_provider == "zhipu":
+            await self._run_zhipu_inference(frame)
+        else:
+            await self._run_ollama_inference(frame)
+
+    async def _run_ollama_inference(self, frame: ProcessedFrame) -> None:
         """运行 Ollama 推理.
 
         Args:
@@ -385,6 +396,77 @@ class MonitorPipeline:
             logger.warning("inference_circuit_breaker_open")
         except Exception as e:
             logger.error("inference_request_error", error=str(e))
+
+    async def _run_zhipu_inference(self, frame: ProcessedFrame) -> None:
+        """运行智谱 GLM-4V 推理.
+
+        Args:
+            frame: 处理后的帧
+        """
+        prompt = """你是一名专业的安防监控专家。请仔细观察图片，识别是否存在以下情况：
+- 陌生人未经授权进入、徘徊或试图遮挡镜头；
+- 暴力行为、摔倒、求救手势或持械等危险动作；
+- 烟雾、火光或室内物品异常倾倒。
+- 人类有攻击性动作。
+- 等等
+必须回答 'ALERT'（存在上述任一风险）或 'SAFE'（环境正常安全），并简述理由。"""
+
+        # 智谱 API 使用 Chat Completions 格式
+        payload = {
+            "model": self._settings.zhipu_model,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{frame.image_b64}"
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self._settings.zhipu_api_key}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            # 通过熔断器保护
+            response = await self._circuit_breaker.call_async(
+                self._http_client.post,
+                self._settings.zhipu_api_url,
+                json=payload,
+                headers=headers,
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                # 智谱 API 返回格式: {"choices": [{"message": {"content": "..."}}]}
+                choices = data.get("choices", [])
+                if choices:
+                    result = choices[0].get("message", {}).get("content", "")
+                    self._handle_inference_result(frame, result)
+                else:
+                    logger.warning("zhipu_empty_response", response=data)
+            else:
+                logger.warning(
+                    "zhipu_http_error",
+                    status=response.status_code,
+                    response=response.text[:500],
+                )
+
+        except CircuitBreakerError:
+            logger.warning("inference_circuit_breaker_open")
+        except Exception as e:
+            logger.error("zhipu_request_error", error=str(e))
 
     def _handle_inference_result(self, frame: ProcessedFrame, result: str) -> None:
         """处理推理结果.
