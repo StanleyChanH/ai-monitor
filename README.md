@@ -85,6 +85,7 @@
 
 - **实时 AI 分析** - 使用视觉模型分析每一帧画面
 - **多种推理后端** - 支持 Ollama（本地）和智谱 GLM-4V（云端）
+- **动作触发检测** - 利用 IP Webcam 传感器，仅在检测到动作时触发推理，省电省流量
 - **多渠道告警** - 震动、通知、Toast、Webhook（支持飞书）
 - **智能去重** - 告警冷却机制，避免刷屏
 - **证据留存** - 自动保存告警截图
@@ -167,6 +168,11 @@ MONITOR_MODEL_NAME=qwen3-vl:4b-instruct-q4_K_M
 # MONITOR_ZHIPU_API_KEY=your_api_key_here
 # MONITOR_ZHIPU_MODEL=glm-4v-flash
 
+# === 动作检测（可选，省电省流量） ===
+# 需要在 IP Webcam 中开启动作检测功能
+# MONITOR_MOTION_DETECTION_ENABLED=true
+# MONITOR_MOTION_CHECK_INTERVAL=0.5
+
 # 推理间隔（秒），越大越省电
 MONITOR_DETECTION_INTERVAL=2.0
 
@@ -195,6 +201,9 @@ MONITOR_ALERT_COOLDOWN=60
 | `MONITOR_CAM_URL` | `http://127.0.0.1:8080/shot.jpg` | 摄像头 HTTP 照片端点 |
 | `MONITOR_CAM_TIMEOUT` | `10.0` | 摄像头连接超时（秒） |
 | `MONITOR_CAM_RECONNECT_ENABLED` | `true` | 启用自动重连 |
+| **动作检测** |||
+| `MONITOR_MOTION_DETECTION_ENABLED` | `false` | 启用动作触发检测 |
+| `MONITOR_MOTION_CHECK_INTERVAL` | `0.5` | 动作传感器检查间隔（秒） |
 | **推理** |||
 | `MONITOR_INFERENCE_PROVIDER` | `ollama` | 推理后端：`ollama` 或 `zhipu` |
 | `MONITOR_INFERENCE_TIMEOUT` | `30.0` | 推理超时（秒） |

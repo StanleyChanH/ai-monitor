@@ -1,6 +1,6 @@
 [project]
 name = "ai-monitor"
-version = "0.2.0"
+version = "0.3.0"
 description = "AI-powered video surveillance monitoring system using Ollama vision model"
 readme = "README.md"
 requires-python = ">=3.12"

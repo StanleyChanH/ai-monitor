@@ -104,6 +104,9 @@ class MonitorPipeline:
         # 推理间隔控制
         self._last_inference_time: float = 0.0
 
+        # 动作检测状态
+        self._motion_sensor_available: bool = True  # 假设传感器可用，失败后降级
+
     async def start(self) -> None:
         """启动流水线."""
         logger.info(
@@ -180,11 +183,23 @@ class MonitorPipeline:
         logger.info("pipeline_stopped", metrics=self._metrics.summary())
 
     async def _capture_worker(self) -> None:
-        """捕获 worker - 持续抓取摄像头帧，支持自动重连."""
-        logger.info("capture_worker_started", cam_url=self._settings.cam_url)
+        """捕获 worker - 持续抓取摄像头帧，支持动作检测和自动重连."""
+        logger.info(
+            "capture_worker_started",
+            cam_url=self._settings.cam_url,
+            motion_detection=self._settings.motion_detection_enabled,
+        )
 
         while not self._shutdown_event.is_set():
             try:
+                # 如果启用了动作检测，先检查动作传感器
+                if self._settings.motion_detection_enabled and self._motion_sensor_available:
+                    motion_detected = await self._check_motion_sensor()
+                    if not motion_detected:
+                        # 无动作，等待后继续检查
+                        await asyncio.sleep(self._settings.motion_check_interval)
+                        continue
+
                 with Timer(self._metrics, PipelineMetrics.STAGE_CAPTURE):
                     response = await self._http_client.get(
                         self._settings.cam_url,
@@ -246,6 +261,58 @@ class MonitorPipeline:
                     error_type=type(e).__name__,
                 )
                 await asyncio.sleep(self.CAPTURE_INTERVAL)
+
+    async def _check_motion_sensor(self) -> bool:
+        """检查 IP Webcam 动作传感器.
+
+        Returns:
+            True 表示检测到动作或传感器不可用（降级为始终触发）
+        """
+        sensor_url = self._settings.motion_sensor_url
+        if not sensor_url:
+            return True
+
+        try:
+            response = await self._http_client.get(
+                sensor_url,
+                timeout=3.0,  # 传感器请求应该很快
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                # 解析 motion_active 传感器数据
+                # 格式: {"motion_active": {"data": [[timestamp, [value]]]}}
+                motion_data = data.get("motion_active", {}).get("data", [])
+                if motion_data:
+                    # 获取最新的动作状态 (1.0 为有动作)
+                    latest = motion_data[-1]
+                    if len(latest) >= 2 and len(latest[1]) >= 1:
+                        motion_status = latest[1][0]
+                        return motion_status == 1.0
+
+                # 数据格式异常，默认触发
+                return True
+            else:
+                # 传感器请求失败，降级为始终触发
+                if self._motion_sensor_available:
+                    logger.warning(
+                        "motion_sensor_unavailable",
+                        status=response.status_code,
+                        fallback="always_capture",
+                    )
+                    self._motion_sensor_available = False
+                return True
+
+        except Exception as e:
+            # 传感器异常，降级为始终触发
+            if self._motion_sensor_available:
+                logger.warning(
+                    "motion_sensor_error",
+                    error=str(e),
+                    fallback="always_capture",
+                )
+                self._motion_sensor_available = False
+            return True
 
     async def _process_worker(self) -> None:
         """处理 worker - 缩放和编码图像."""

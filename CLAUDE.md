@@ -8,7 +8,7 @@ AI-powered video surveillance monitoring system that captures camera frames and 
 
 ## Architecture
 
-### Pipeline Architecture (v0.2.0)
+### Pipeline Architecture (v0.3.0)
 
 Three-stage async pipeline with parallel execution:
 
@@ -117,7 +117,7 @@ ai-monitor/
         └── 2026-02-23-optimization-design.md  # Design document
 ```
 
-## Key Features Implemented (v0.2.0)
+## Key Features Implemented (v0.3.0)
 
 1. **Pipeline Architecture**: Non-blocking inference, frame capture continues during processing
 2. **Multi-Provider Inference**: Supports both Ollama (local) and Zhipu GLM-4V (cloud)

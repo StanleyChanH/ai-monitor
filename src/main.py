@@ -67,7 +67,7 @@ class Application:
 
         logger.info(
             "application_starting",
-            version="0.2.0",
+            version="0.3.0",
             provider=self._settings.inference_provider,
             cam_url=self._settings.cam_url,
         )

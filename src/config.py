@@ -3,7 +3,6 @@
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 
 def _get_bool_env(key: str, default: bool = False) -> bool:
@@ -64,6 +63,14 @@ class Settings:
     )
     cam_reconnect_max_delay: float = field(
         default_factory=lambda: _get_float_env("MONITOR_CAM_RECONNECT_MAX_DELAY", 60.0)
+    )
+
+    # 动作检测（IP Webcam 传感器）
+    motion_detection_enabled: bool = field(
+        default_factory=lambda: _get_bool_env("MONITOR_MOTION_DETECTION_ENABLED", False)
+    )
+    motion_check_interval: float = field(
+        default_factory=lambda: _get_float_env("MONITOR_MOTION_CHECK_INTERVAL", 0.5)
     )
 
     # 推理配置
@@ -220,6 +227,13 @@ class Settings:
         if not isinstance(self.alert_image_dir, Path):
             self.alert_image_dir = Path(self.alert_image_dir)
 
+        # 计算动作传感器 URL（从 cam_url 推导）
+        self._motion_sensor_url: str | None = None
+        if self.motion_detection_enabled:
+            # 从 http://host:port/shot.jpg 提取 http://host:port
+            base_url = self.cam_url.rsplit("/", 1)[0]
+            self._motion_sensor_url = f"{base_url}/sensors.json?sense=motion_active"
+
     def display(self) -> str:
         """显示配置信息."""
         lines = [
@@ -239,6 +253,7 @@ class Settings:
         lines.extend([
             f"目标宽度: {self.target_width}",
             f"检测间隔: {self.detection_interval}s",
+            f"动作检测: {'启用' if self.motion_detection_enabled else '禁用'}",
             f"告警冷却: {self.alert_cooldown}s",
             f"日志级别: {self.log_level}",
             f"日志目录: {self.log_dir}",
@@ -246,3 +261,8 @@ class Settings:
             "========================",
         ])
         return "\n".join(lines)
+
+    @property
+    def motion_sensor_url(self) -> str | None:
+        """获取动作传感器 URL."""
+        return self._motion_sensor_url
