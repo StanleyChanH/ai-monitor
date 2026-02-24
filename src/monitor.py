@@ -106,6 +106,7 @@ class MonitorPipeline:
 
         # 动作检测状态
         self._motion_sensor_available: bool = True  # 假设传感器可用，失败后降级
+        self._motion_no_action_count: int = 0  # 连续无动作计数（用于日志）
 
     async def start(self) -> None:
         """启动流水线."""
@@ -196,9 +197,23 @@ class MonitorPipeline:
                 if self._settings.motion_detection_enabled and self._motion_sensor_available:
                     motion_detected = await self._check_motion_sensor()
                     if not motion_detected:
-                        # 无动作，等待后继续检查
+                        self._motion_no_action_count += 1
+                        # 每 60 次无动作输出一次日志（约 30 秒）
+                        if self._motion_no_action_count % 60 == 0:
+                            logger.debug(
+                                "motion_no_action",
+                                count=self._motion_no_action_count,
+                            )
                         await asyncio.sleep(self._settings.motion_check_interval)
                         continue
+                    else:
+                        # 检测到动作
+                        if self._motion_no_action_count > 0:
+                            logger.info(
+                                "motion_detected",
+                                no_action_count=self._motion_no_action_count,
+                            )
+                            self._motion_no_action_count = 0
 
                 with Timer(self._metrics, PipelineMetrics.STAGE_CAPTURE):
                     response = await self._http_client.get(
