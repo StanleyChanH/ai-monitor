@@ -1,10 +1,15 @@
-"""简化日志模块 - 标准库实现（无 structlog 依赖）."""
+"""简化日志模块 - 标准库实现（无 structlog 依赖），支持日志轮转."""
 
 import logging
+import logging.handlers
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+
+# 日志轮转默认配置
+DEFAULT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB
+DEFAULT_BACKUP_COUNT = 5  # 保留 5 个备份
 
 
 class ColorFormatter(logging.Formatter):
@@ -34,13 +39,17 @@ def setup_logging(
     log_dir: Path,
     log_level: str = "INFO",
     development: bool = True,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    backup_count: int = DEFAULT_BACKUP_COUNT,
 ) -> None:
-    """配置日志系统.
+    """配置日志系统，支持日志轮转.
 
     Args:
         log_dir: 日志目录
         log_level: 日志级别
-        development: 是否为开发环境
+        development: 是否为开发环境（开发环境使用彩色控制台输出）
+        max_bytes: 单个日志文件最大大小（字节）
+        backup_count: 保留的备份文件数量
     """
     # 确保日志目录存在
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -49,6 +58,10 @@ def setup_logging(
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, log_level.upper()))
     root_logger.handlers.clear()
+
+    # 抑制 httpx 的 HTTP 请求日志（太多了）
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     # 控制台处理器
     console_handler = logging.StreamHandler(sys.stdout)
@@ -68,16 +81,21 @@ def setup_logging(
     console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
 
-    # 文件处理器（仅非开发环境）
-    if not development:
-        file_handler = logging.FileHandler(log_dir / "monitor.log")
-        file_handler.setLevel(getattr(logging, log_level.upper()))
-        file_formatter = logging.Formatter(
-            fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        file_handler.setFormatter(file_formatter)
-        root_logger.addHandler(file_handler)
+    # 文件处理器（使用 RotatingFileHandler 实现轮转）
+    log_file = log_dir / "monitor.log"
+    file_handler = logging.handlers.RotatingFileHandler(
+        filename=log_file,
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(getattr(logging, log_level.upper()))
+    file_formatter = logging.Formatter(
+        fmt="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    file_handler.setFormatter(file_formatter)
+    root_logger.addHandler(file_handler)
 
 
 class BoundLogger:
