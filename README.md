@@ -70,6 +70,7 @@
               ├──────────────────────────────┤
               │ • Ollama（本地/局域网）免费     │
               │ • 智谱 GLM-4V-Flash（云端）免费 │
+              │ • OpenAI 兼容（vLLM/LocalAI）  │
               └──────────────────────────────┘
 ```
 
@@ -77,14 +78,15 @@
 - **手机端轻量运行**：只负责抓帧和告警，推理负载在服务器
 - **非阻塞流水线**：推理 3-5 秒不影响帧抓取，不漏掉任何画面
 - **完整容错机制**：熔断器 + 自动重连 + 优雅降级
-- **多种推理后端**：支持 Ollama 本地推理或智谱云端 API
+- **多种推理后端**：支持 Ollama、智谱 GLM-4V、OpenAI 兼容 API（vLLM/LocalAI）
 
 ---
 
 ## 功能特性
 
 - **实时 AI 分析** - 使用视觉模型分析每一帧画面
-- **多种推理后端** - 支持 Ollama（本地）和智谱 GLM-4V（云端）
+- **多种推理后端** - 支持 Ollama（本地）、智谱 GLM-4V（云端）、OpenAI 兼容 API（vLLM/LocalAI）
+- **自定义提示词** - 可根据场景定制监控逻辑（宠物监护、老人看护等）
 - **动作触发检测** - 利用 IP Webcam 传感器，仅在检测到动作时触发推理，省电省流量
 - **多渠道告警** - 震动、通知、Toast、Webhook（支持飞书）
 - **智能去重** - 告警冷却机制，避免刷屏
@@ -105,7 +107,7 @@
 2. 安装 [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam)（或其他能提供 HTTP 照片端点的 App）
 3. 安装 [Termux:API](https://wiki.termux.com/wiki/Termux:API)（用于系统通知）
 
-**推理后端（二选一）**：
+**推理后端（三选一）**：
 
 <details>
 <summary><b>方案 A: Ollama（本地/局域网，推荐）</b></summary>
@@ -127,6 +129,26 @@ ollama pull qwen3-vl:4b-instruct-q4_K_M
 1. 注册 [智谱开放平台](https://open.bigmodel.cn/)
 2. 获取 API Key
 3. 无需本地 GPU，直接使用云端免费额度
+
+</details>
+
+<details>
+<summary><b>方案 C: OpenAI 兼容 API（vLLM/LocalAI）</b></summary>
+
+支持任何 OpenAI 兼容的视觉模型服务：
+
+**vLLM 示例**：
+```bash
+# 启动 vLLM 服务
+vllm serve Qwen/Qwen2-VL-7B-Instruct --port 8000
+```
+
+**配置**：
+```bash
+MONITOR_INFERENCE_PROVIDER=openai
+MONITOR_OPENAI_API_URL=http://localhost:8000/v1/chat/completions
+MONITOR_OPENAI_MODEL=Qwen/Qwen2-VL-7B-Instruct
+```
 
 </details>
 
@@ -157,7 +179,7 @@ nano .env  # 或 vim .env
 # 摄像头地址（IP Webcam 启动后显示的地址）
 MONITOR_CAM_URL=http://192.168.1.100:8080/shot.jpg
 
-# 推理后端选择：ollama 或 zhipu
+# 推理后端选择：ollama、zhipu 或 openai
 MONITOR_INFERENCE_PROVIDER=ollama
 
 # === Ollama 配置（当 PROVIDER=ollama 时） ===
@@ -167,6 +189,14 @@ MONITOR_MODEL_NAME=qwen3-vl:4b-instruct-q4_K_M
 # === 智谱配置（当 PROVIDER=zhipu 时） ===
 # MONITOR_ZHIPU_API_KEY=your_api_key_here
 # MONITOR_ZHIPU_MODEL=glm-4v-flash
+
+# === OpenAI 兼容配置（当 PROVIDER=openai 时） ===
+# MONITOR_OPENAI_API_URL=http://localhost:8000/v1/chat/completions
+# MONITOR_OPENAI_MODEL=Qwen/Qwen2-VL-7B-Instruct
+
+# === 自定义提示词（可选） ===
+# 默认为安防监控场景，可自定义监控逻辑
+# MONITOR_INFERENCE_PROMPT=你是一名宠物监控专家...
 
 # === 动作检测（可选，省电省流量） ===
 # 需要在 IP Webcam 中开启动作检测功能
@@ -205,9 +235,10 @@ MONITOR_ALERT_COOLDOWN=60
 | `MONITOR_MOTION_DETECTION_ENABLED` | `false` | 启用动作触发检测 |
 | `MONITOR_MOTION_CHECK_INTERVAL` | `0.5` | 动作传感器检查间隔（秒） |
 | **推理** |||
-| `MONITOR_INFERENCE_PROVIDER` | `ollama` | 推理后端：`ollama` 或 `zhipu` |
+| `MONITOR_INFERENCE_PROVIDER` | `ollama` | 推理后端：`ollama`、`zhipu` 或 `openai` |
 | `MONITOR_INFERENCE_TIMEOUT` | `30.0` | 推理超时（秒） |
 | `MONITOR_DETECTION_INTERVAL` | `2.0` | 推理间隔（秒） |
+| `MONITOR_INFERENCE_PROMPT` | *(内置默认)* | 自定义提示词（所有提供商共用） |
 | **Ollama（provider=ollama）** |||
 | `MONITOR_OLLAMA_API` | - | Ollama API 地址 |
 | `MONITOR_MODEL_NAME` | `qwen3-vl:4b-instruct-q4_K_M` | 视觉模型名称 |
@@ -215,6 +246,10 @@ MONITOR_ALERT_COOLDOWN=60
 | `MONITOR_ZHIPU_API_KEY` | - | 智谱 API Key（必填） |
 | `MONITOR_ZHIPU_API_URL` | 智谱 API 地址 | 一般无需修改 |
 | `MONITOR_ZHIPU_MODEL` | `glm-4v-flash` | 视觉模型名称 |
+| **OpenAI 兼容（provider=openai）** |||
+| `MONITOR_OPENAI_API_KEY` | - | API Key（本地部署可留空） |
+| `MONITOR_OPENAI_API_URL` | `http://localhost:8000/v1/chat/completions` | OpenAI 兼容 API 地址 |
+| `MONITOR_OPENAI_MODEL` | - | 视觉模型名称（必填） |
 | **告警** |||
 | `MONITOR_WEBHOOK_URL` | - | Webhook 地址（支持飞书） |
 | `MONITOR_ALERT_COOLDOWN` | `60` | 告警冷却时间（秒） |
@@ -297,16 +332,31 @@ A: Termux 方案的优势：
 </details>
 
 <details>
-<summary><b>Q: Ollama 和智谱云端 API 怎么选？</b></summary>
+<summary><b>Q: Ollama、智谱、OpenAI 兼容怎么选？</b></summary>
 
 A:
-| 对比项 | Ollama | 智谱 GLM-4V-Flash |
-|--------|--------|-------------------|
-| 硬件需求 | 需要 GPU | 无需 |
-| 费用 | 免费 | 免费额度（有限） |
-| 隐私 | 本地处理 | 云端处理 |
-| 网络依赖 | 局域网即可 | 需要互联网 |
-| 推荐场景 | 有闲置 GPU 设备 | 无 GPU、想快速体验 |
+| 对比项 | Ollama | 智谱 GLM-4V | OpenAI 兼容 (vLLM) |
+|--------|--------|-------------|-------------------|
+| 硬件需求 | 需要 GPU | 无需 | 需要 GPU |
+| 费用 | 免费 | 免费额度 | 免费 |
+| 隐私 | 本地处理 | 云端处理 | 本地处理 |
+| 网络依赖 | 局域网即可 | 需要互联网 | 局域网即可 |
+| 推荐场景 | 有闲置 GPU | 无 GPU、快速体验 | 高性能本地部署 |
+
+</details>
+
+<details>
+<summary><b>Q: 如何自定义监控场景（如宠物监护）？</b></summary>
+
+A: 通过 `MONITOR_INFERENCE_PROMPT` 环境变量自定义提示词：
+
+```bash
+# 宠物监护场景
+MONITOR_INFERENCE_PROMPT=你是一名宠物监控专家。请观察图片，识别宠物是否在捣乱（翻垃圾桶、挠沙发、咬电线）。回答 ALERT 或 SAFE，并简述理由。
+
+# 老人看护场景
+MONITOR_INFERENCE_PROMPT=你是一名老人看护专家。请观察图片，识别老人是否有跌倒、长时间不动、或需要帮助的情况。回答 ALERT 或 SAFE，并简述理由。
+```
 
 </details>
 

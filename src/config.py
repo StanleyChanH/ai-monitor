@@ -111,6 +111,35 @@ class Settings:
         )
     )
 
+    # OpenAI 兼容（当 provider=openai 时使用）
+    # 支持：OpenAI GPT-4V、vLLM、LocalAI 等兼容服务
+    openai_api_key: str = field(
+        default_factory=lambda: os.getenv("MONITOR_OPENAI_API_KEY", "")
+    )
+    openai_api_url: str = field(
+        default_factory=lambda: os.getenv(
+            "MONITOR_OPENAI_API_URL",
+            "http://localhost:8000/v1/chat/completions"  # 默认 vLLM 地址
+        )
+    )
+    openai_model: str = field(
+        default_factory=lambda: os.getenv("MONITOR_OPENAI_MODEL", "")
+    )
+
+    # 推理提示词（所有提供商共用）
+    inference_prompt: str = field(
+        default_factory=lambda: os.getenv(
+            "MONITOR_INFERENCE_PROMPT",
+            """你是一名专业的安防监控专家。请仔细观察图片，识别是否存在以下情况：
+- 陌生人未经授权进入、徘徊或试图遮挡镜头；
+- 暴力行为、摔倒、求救手势或持械等危险动作；
+- 烟雾、火光或室内物品异常倾倒。
+- 人类有攻击性动作。
+- 等等
+必须回答 'ALERT'（存在上述任一风险）或 'SAFE'（环境正常安全），并简述理由。"""
+        )
+    )
+
     # 性能
     target_width: int = field(
         default_factory=lambda: _get_int_env("MONITOR_TARGET_WIDTH", 640)
@@ -190,7 +219,7 @@ class Settings:
     def __post_init__(self):
         """配置验证."""
         # 验证推理提供商
-        valid_providers = {"ollama", "zhipu"}
+        valid_providers = {"ollama", "zhipu", "openai"}
         if self.inference_provider not in valid_providers:
             raise ValueError(
                 f"inference_provider must be one of {valid_providers}, "
@@ -201,6 +230,12 @@ class Settings:
         if self.inference_provider == "zhipu" and not self.zhipu_api_key:
             raise ValueError(
                 "zhipu_api_key is required when inference_provider is 'zhipu'"
+            )
+
+        # 验证 OpenAI Model（如果使用 openai）
+        if self.inference_provider == "openai" and not self.openai_model:
+            raise ValueError(
+                "openai_model is required when inference_provider is 'openai'"
             )
 
         # 验证日志级别
@@ -246,9 +281,12 @@ class Settings:
         if self.inference_provider == "ollama":
             lines.append(f"Ollama API: {self.ollama_api}")
             lines.append(f"模型: {self.model_name}")
-        else:  # zhipu
+        elif self.inference_provider == "zhipu":
             lines.append(f"智谱 API: {self.zhipu_api_url}")
             lines.append(f"模型: {self.zhipu_model}")
+        else:  # openai
+            lines.append(f"OpenAI API: {self.openai_api_url}")
+            lines.append(f"模型: {self.openai_model}")
 
         lines.extend([
             f"目标宽度: {self.target_width}",
