@@ -110,12 +110,31 @@ class MonitorPipeline:
 
     async def start(self) -> None:
         """启动流水线."""
-        logger.info(
-            "pipeline_starting",
-            cam_url=self._settings.cam_url,
-            ollama_api=self._settings.ollama_api,
-            model=self._settings.model_name,
-        )
+        # 根据提供商显示不同的日志信息
+        if self._settings.inference_provider == "openai":
+            logger.info(
+                "pipeline_starting",
+                cam_url=self._settings.cam_url,
+                provider=self._settings.inference_provider,
+                api_url=self._settings.openai_api_url,
+                model=self._settings.openai_model,
+            )
+        elif self._settings.inference_provider == "zhipu":
+            logger.info(
+                "pipeline_starting",
+                cam_url=self._settings.cam_url,
+                provider=self._settings.inference_provider,
+                api_url=self._settings.zhipu_api_url,
+                model=self._settings.zhipu_model,
+            )
+        else:
+            logger.info(
+                "pipeline_starting",
+                cam_url=self._settings.cam_url,
+                provider=self._settings.inference_provider,
+                ollama_api=self._settings.ollama_api,
+                model=self._settings.model_name,
+            )
 
         # 初始化 HTTP 客户端
         limits = httpx.Limits(max_keepalive_connections=5, max_connections=10)
