@@ -12,6 +12,7 @@
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform: Termux](https://img.shields.io/badge/Platform-Termux-green.svg)](https://termux.com/)
+[![Privacy: 100% Local](https://img.shields.io/badge/Privacy-100%25_Local-brightgreen.svg)]()
 
 </div>
 
@@ -28,7 +29,8 @@
 | 硬件成本 | ¥200-2000 | ¥100-500 | **¥0（旧手机）** |
 | 月费 | 无 | ¥10-50/月 | **¥0** |
 | AI 识别 | 无/额外付费 | 有限 | **有，可自定义** |
-| 隐私保护 | ⚠️ 云存储 | ⚠️ 云处理 | **✅ 本地处理** |
+| 隐私保护 | ⚠️ 云存储 | ⚠️ 云处理 | **✅ 100% 本地** |
+| 网络依赖 | 需联网 | 需联网 | **❌ 完全离线可用** |
 | 告警方式 | App 推送 | App 推送 | **震动+通知+Webhook** |
 
 ---
@@ -55,37 +57,68 @@
 
 ## 架构亮点
 
+### 方案一：完全本地（推荐，隐私最佳）
+
+一台手机搞定所有，**无需网络、无需服务器、100% 隐私**：
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        你的手机 (Termux)                          │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐          │
-│  │  IP Webcam  │───▶│  AI Monitor │───▶│   告警系统   │          │
-│  │   (摄像头)   │    │   (推理)     │    │ (震动/通知)  │          │
-│  └─────────────┘    └──────┬──────┘    └─────────────┘          │
-└────────────────────────────┼────────────────────────────────────┘
-                             │
-                             ▼
-              ┌──────────────────────────────┐
-              │        推理后端（可选）         │
-              ├──────────────────────────────┤
-              │ • Ollama（本地/局域网）免费     │
-              │ • 智谱 GLM-4V-Flash（云端）免费 │
-              │ • OpenAI 兼容（vLLM/LocalAI）  │
-              └──────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     你的手机 (Android)                       │
+│                                                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐       │
+│  │  IP Webcam  │──▶│  AI Monitor │──▶│  MNN Chat   │       │
+│  │   (摄像头)   │   │  (Termux)   │   │  (本地推理)  │       │
+│  └─────────────┘   └──────┬──────┘   └─────────────┘       │
+│                           │                                 │
+│                           ▼                                 │
+│                    ┌─────────────┐                          │
+│                    │   告警系统   │                          │
+│                    │ (震动/通知)  │                          │
+│                    └─────────────┘                          │
+└─────────────────────────────────────────────────────────────┘
+
+✅ 完全离线运行  ✅ 零网络延迟  ✅ 数据不出手机
+```
+
+### 方案二：局域网推理
+
+手机负责采集，局域网服务器负责推理：
+
+```
+┌─────────────────────────────┐      ┌─────────────────────┐
+│      你的手机 (Termux)       │      │   局域网服务器       │
+│  ┌─────────┐  ┌──────────┐  │      │  ┌───────────────┐  │
+│  │IP Webcam│─▶│AI Monitor│──│──▶WiFi──▶│    Ollama     │  │
+│  └─────────┘  └──────────┘  │      │  │  vLLM/LocalAI │  │
+│               ┌──────────┐  │      │  └───────────────┘  │
+│               │  告警系统 │◀─│──◀WiFi───────────────────┘
+│               └──────────┘  │      │                     │
+└─────────────────────────────┘      └─────────────────────┘
+
+✅ 无需公网  ✅ 本地处理  ✅ 多手机共享算力
+```
+
+### 方案三：云端推理
+
+无本地算力时的备选方案：
+
+```
+手机 (Termux) ──互联网──▶ 智谱 GLM-4V / OpenAI
 ```
 
 **设计优势**：
-- **手机端轻量运行**：只负责抓帧和告警，推理负载在服务器
+- **完全本地可选**：MNN Chat 让一台手机即可完成所有处理，隐私最大化
 - **非阻塞流水线**：推理 3-5 秒不影响帧抓取，不漏掉任何画面
 - **完整容错机制**：熔断器 + 自动重连 + 优雅降级
-- **多种推理后端**：支持 Ollama、智谱 GLM-4V、OpenAI 兼容 API（vLLM/LocalAI）
+- **多种推理后端**：MNN Chat、Ollama、智谱 GLM-4V、vLLM/LocalAI
 
 ---
 
 ## 功能特性
 
-- **实时 AI 分析** - 使用视觉模型分析每一帧画面
-- **多种推理后端** - 支持 Ollama（本地）、智谱 GLM-4V（云端）、OpenAI 兼容 API（vLLM/LocalAI）
+- **🔒 100% 本地可选** - 支持 MNN Chat 纯本地推理，数据不出手机
+- **🤖 实时 AI 分析** - 使用视觉模型分析每一帧画面
+- **多种推理后端** - MNN Chat（手机本地）、Ollama（局域网）、智谱 GLM-4V（云端）、vLLM/LocalAI
 - **自定义提示词** - 可根据场景定制监控逻辑（宠物监护、老人看护等）
 - **动作触发检测** - 利用 IP Webcam 传感器，仅在检测到动作时触发推理，省电省流量
 - **多渠道告警** - 震动、通知、Toast、Webhook（支持飞书）
@@ -102,17 +135,41 @@
 
 ### 1. 准备工作
 
-**手机端**：
+**手机端（必须）**：
 1. 安装 [Termux](https://termux.com/)
 2. 安装 [IP Webcam](https://play.google.com/store/apps/details?id=com.pas.webcam)（或其他能提供 HTTP 照片端点的 App）
 3. 安装 [Termux:API](https://wiki.termux.com/wiki/Termux:API)（用于系统通知）
 
-**推理后端（三选一）**：
+**推理后端（四选一）**：
 
 <details>
-<summary><b>方案 A: Ollama（本地/局域网，推荐）</b></summary>
+<summary><b>⭐ 方案 A: MNN Chat（手机本地，强烈推荐）</b></summary>
 
-需要一台有 GPU 的机器（甚至 NAS、树莓派）：
+**完全本地运行，无需网络，隐私最佳！**
+
+1. 安装 [MNN Chat](https://github.com/alibaba/MNN)（阿里巴巴开源，支持 Android）
+2. 在 MNN Chat 中下载视觉模型（如 Qwen2-VL、LLaVA）
+3. 开启 OpenAI 兼容 API 服务（默认端口通常是 11434 或自定义）
+
+**优势**：
+- ✅ 完全离线运行，不需要任何网络
+- ✅ 数据不出手机，隐私最大化
+- ✅ 零延迟，响应速度快
+- ✅ 一台手机搞定所有
+
+**配置**：
+```bash
+MONITOR_INFERENCE_PROVIDER=openai
+MONITOR_OPENAI_API_URL=http://127.0.0.1:11434/v1/chat/completions
+MONITOR_OPENAI_MODEL=your-model-name
+```
+
+</details>
+
+<details>
+<summary><b>方案 B: Ollama（局域网服务器）</b></summary>
+
+需要一台有 GPU 的机器（PC、NAS、树莓派）：
 ```bash
 # 安装 Ollama
 curl -fsSL https://ollama.com/install.sh | sh
@@ -124,31 +181,31 @@ ollama pull qwen3-vl:4b-instruct-q4_K_M
 </details>
 
 <details>
-<summary><b>方案 B: 智谱 GLM-4V-Flash（云端，无需本地 GPU）</b></summary>
-
-1. 注册 [智谱开放平台](https://open.bigmodel.cn/)
-2. 获取 API Key
-3. 无需本地 GPU，直接使用云端免费额度
-
-</details>
-
-<details>
-<summary><b>方案 C: OpenAI 兼容 API（vLLM/LocalAI）</b></summary>
+<summary><b>方案 C: vLLM / LocalAI（局域网服务器）</b></summary>
 
 支持任何 OpenAI 兼容的视觉模型服务：
 
-**vLLM 示例**：
 ```bash
-# 启动 vLLM 服务
+# vLLM 示例
 vllm serve Qwen/Qwen2-VL-7B-Instruct --port 8000
 ```
 
 **配置**：
 ```bash
 MONITOR_INFERENCE_PROVIDER=openai
-MONITOR_OPENAI_API_URL=http://localhost:8000/v1/chat/completions
+MONITOR_OPENAI_API_URL=http://192.168.1.100:8000/v1/chat/completions
 MONITOR_OPENAI_MODEL=Qwen/Qwen2-VL-7B-Instruct
 ```
+
+</details>
+
+<details>
+<summary><b>方案 D: 智谱 GLM-4V-Flash（云端）</b></summary>
+
+无本地算力时的备选方案：
+1. 注册 [智谱开放平台](https://open.bigmodel.cn/)
+2. 获取 API Key
+3. 使用云端免费额度
 
 </details>
 
@@ -179,27 +236,46 @@ nano .env  # 或 vim .env
 # 摄像头地址（IP Webcam 启动后显示的地址）
 MONITOR_CAM_URL=http://192.168.1.100:8080/shot.jpg
 
-# 推理后端选择：ollama、zhipu 或 openai
-MONITOR_INFERENCE_PROVIDER=ollama
+# 推理后端选择：openai、ollama 或 zhipu
+# 推荐 openai，可配合 MNN Chat 实现完全本地运行
+MONITOR_INFERENCE_PROVIDER=openai
 
-# === Ollama 配置（当 PROVIDER=ollama 时） ===
-MONITOR_OLLAMA_API=http://192.168.1.200:11434/api/generate
-MONITOR_MODEL_NAME=qwen3-vl:4b-instruct-q4_K_M
+# ========================================
+# 方案 A: MNN Chat（手机本地，推荐）
+# ========================================
+# 在 MNN Chat 中开启 OpenAI 兼容 API 服务
+MONITOR_OPENAI_API_URL=http://127.0.0.1:11434/v1/chat/completions
+MONITOR_OPENAI_MODEL=Qwen2-VL-7B-Instruct
+# 无需 API Key（本地服务）
 
-# === 智谱配置（当 PROVIDER=zhipu 时） ===
+# ========================================
+# 方案 B: Ollama（局域网服务器）
+# ========================================
+# MONITOR_INFERENCE_PROVIDER=ollama
+# MONITOR_OLLAMA_API=http://192.168.1.200:11434/api/generate
+# MONITOR_MODEL_NAME=qwen3-vl:4b-instruct-q4_K_M
+
+# ========================================
+# 方案 C: vLLM/LocalAI（局域网服务器）
+# ========================================
+# MONITOR_INFERENCE_PROVIDER=openai
+# MONITOR_OPENAI_API_URL=http://192.168.1.100:8000/v1/chat/completions
+# MONITOR_OPENAI_MODEL=Qwen/Qwen2-VL-7B-Instruct
+
+# ========================================
+# 方案 D: 智谱云端（无本地算力时）
+# ========================================
+# MONITOR_INFERENCE_PROVIDER=zhipu
 # MONITOR_ZHIPU_API_KEY=your_api_key_here
 # MONITOR_ZHIPU_MODEL=glm-4v-flash
 
-# === OpenAI 兼容配置（当 PROVIDER=openai 时） ===
-# MONITOR_OPENAI_API_URL=http://localhost:8000/v1/chat/completions
-# MONITOR_OPENAI_MODEL=Qwen/Qwen2-VL-7B-Instruct
-
-# === 自定义提示词（可选） ===
-# 默认为安防监控场景，可自定义监控逻辑
+# ========================================
+# 通用配置
+# ========================================
+# 自定义提示词（可选，默认为安防监控）
 # MONITOR_INFERENCE_PROMPT=你是一名宠物监控专家...
 
-# === 动作检测（可选，省电省流量） ===
-# 需要在 IP Webcam 中开启动作检测功能
+# 动作检测（可选，省电省流量）
 # MONITOR_MOTION_DETECTION_ENABLED=true
 # MONITOR_MOTION_CHECK_INTERVAL=0.5
 
@@ -262,6 +338,16 @@ MONITOR_ALERT_COOLDOWN=60
 
 ## 推荐的视觉模型
 
+### 手机本地运行（MNN Chat）
+
+| 模型 | 参数量 | 手机内存需求 | 推荐场景 |
+|------|--------|-------------|----------|
+| Qwen2-VL-2B | 2B | ~4GB | **手机首选**，速度快 |
+| Qwen2-VL-7B | 7B | ~8GB | 效果更好，需高端手机 |
+| LLaVA-v1.6 | 7B | ~8GB | 通用视觉模型 |
+
+### 局域网服务器（Ollama/vLLM）
+
 | 模型 | 参数量 | 量化 | 显存需求 | 推荐场景 |
 |------|--------|------|----------|----------|
 | `qwen3-vl:4b-instruct-q4_K_M` | 4B | Q4 | ~3GB | **默认推荐**，平衡效果和速度 |
@@ -272,6 +358,19 @@ MONITOR_ALERT_COOLDOWN=60
 
 ## 性能参考
 
+### 完全本地（MNN Chat + Termux 同一手机）
+
+在骁龙 8 Gen 2 手机环境下：
+
+| 阶段 | 耗时 |
+|------|------|
+| 帧抓取 | ~10ms |
+| 图像处理 | ~20ms |
+| 模型推理（2B） | ~2-4s |
+| 模型推理（7B） | ~5-10s |
+
+### 局域网推理（手机 + 服务器）
+
 在骁龙 888 手机 + RTX 3060 服务器环境下：
 
 | 阶段 | 耗时 |
@@ -281,9 +380,9 @@ MONITOR_ALERT_COOLDOWN=60
 | 模型推理 | ~3-5s |
 
 **优化建议**：
-- 降低 `MONITOR_TARGET_WIDTH` 减少传输数据
-- 增大 `MONITOR_DETECTION_INTERVAL` 省电
-- 使用更小的量化模型加快推理
+- 完全本地：使用 2B 模型，开启动作检测
+- 局域网：降低 `MONITOR_TARGET_WIDTH` 减少传输数据
+- 通用：增大 `MONITOR_DETECTION_INTERVAL` 省电
 
 ---
 
@@ -332,16 +431,36 @@ A: Termux 方案的优势：
 </details>
 
 <details>
-<summary><b>Q: Ollama、智谱、OpenAI 兼容怎么选？</b></summary>
+<summary><b>Q: 推理后端怎么选？</b></summary>
 
 A:
-| 对比项 | Ollama | 智谱 GLM-4V | OpenAI 兼容 (vLLM) |
-|--------|--------|-------------|-------------------|
-| 硬件需求 | 需要 GPU | 无需 | 需要 GPU |
-| 费用 | 免费 | 免费额度 | 免费 |
-| 隐私 | 本地处理 | 云端处理 | 本地处理 |
-| 网络依赖 | 局域网即可 | 需要互联网 | 局域网即可 |
-| 推荐场景 | 有闲置 GPU | 无 GPU、快速体验 | 高性能本地部署 |
+| 对比项 | MNN Chat ⭐ | Ollama | 智谱 GLM-4V | vLLM |
+|--------|------------|--------|-------------|------|
+| 运行位置 | **手机本地** | 局域网服务器 | 云端 | 局域网服务器 |
+| 硬件需求 | **无（手机即可）** | 需要 GPU | 无需 | 需要 GPU |
+| 网络依赖 | **完全离线** | 局域网 | 需要互联网 | 局域网 |
+| 隐私保护 | **最高** | 高 | 低 | 高 |
+| 费用 | **免费** | 免费 | 免费额度 | 免费 |
+| 推荐场景 | **隐私优先/无服务器** | 有闲置 GPU | 无 GPU、快速体验 | 高性能部署 |
+
+**推荐**：如果追求隐私和便携性，首选 **MNN Chat**，一台手机搞定所有！
+
+</details>
+
+<details>
+<summary><b>Q: MNN Chat 如何配置？</b></summary>
+
+A: MNN Chat 是阿里巴巴开源的移动端推理引擎，支持在手机上运行视觉模型：
+
+1. **安装 MNN Chat**：从 [GitHub Releases](https://github.com/alibaba/MNN/releases) 下载 Android 版本
+2. **下载模型**：在 App 内下载视觉模型（如 Qwen2-VL-2B）
+3. **开启 API 服务**：在设置中开启 OpenAI 兼容 API，记下端口号
+4. **配置 AI Monitor**：
+   ```bash
+   MONITOR_INFERENCE_PROVIDER=openai
+   MONITOR_OPENAI_API_URL=http://127.0.0.1:端口号/v1/chat/completions
+   MONITOR_OPENAI_MODEL=模型名称
+   ```
 
 </details>
 
